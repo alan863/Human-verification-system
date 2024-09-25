@@ -263,7 +263,7 @@ unsigned int loadTexture(char const* path)
     1.0, -1.0, -1.0,
     1.0,  1.0, -1.0,
     -1.0,  1.0, -1.0,
-}; 
+};
 */
 GLuint cube_colours[] = {
     /*front colors*/
@@ -320,7 +320,7 @@ public:
 };
 
 static std::vector <softBodyEdge> Edges = {
-   
+
     softBodyEdge(0,3,1.0f,1.0f),
     //softBodyEdge(3,0,1.0f,1.0f),
     softBodyEdge(0,4,1.0f,1.0f),
@@ -373,12 +373,12 @@ static std::vector <softBodyEdge> Edges = {
 class model {
 public:
     //softBodyTriangle Triangles[12];
-    
+
     float initialVolume, volume;
 
     vertex Points[8] = {
 {   { -0.5f,  -0.5f, 0.5f }, { 0.0f, 0.0f, 0.0f }, {1.0f , 1.0f} }, //corner at 0,0
-{   { 0.5f,  -0.5f, 0.5f }, { 0.0f, 0.0f, 0.0f },  {0.0f , 1.0f} }, 
+{   { 0.5f,  -0.5f, 0.5f }, { 0.0f, 0.0f, 0.0f },  {0.0f , 1.0f} },
 {   { 0.5f, 0.5f, 0.5f }, { 0.0f, 0.0f, 0.0f },    {0.0f , 0.0f} }, //corner at 0,0
 {   { -0.5f,  0.5f, 0.5f }, { 0.0f, 0.0f, 0.0f },  {1.0f , 0.0f} },
 {   { -0.5f, -0.5f, -0.5f }, { 0.0f, 0.0f, 0.0f }, {0.0f , 0.0f} },
@@ -386,8 +386,18 @@ public:
 {   { 0.5f,  0.5f, -0.5f }, { 0.0f, 0.0f, 0.0f },  {1.0f , 0.0f} },
 {   { -0.5f,  0.5f, -0.5f }, { 0.0f, 0.0f, 0.0f }, {0.0f , 1.0f} },
     };
-     
-    
+
+    vertex baseMesh[8] = {
+{   { -0.5f,  -0.5f, 0.5f }, { 0.0f, 0.0f, 0.0f }, {1.0f , 1.0f} }, //corner at 0,0
+{   { 0.5f,  -0.5f, 0.5f }, { 0.0f, 0.0f, 0.0f },  {0.0f , 1.0f} },
+{   { 0.5f, 0.5f, 0.5f }, { 0.0f, 0.0f, 0.0f },    {0.0f , 0.0f} }, //corner at 0,0
+{   { -0.5f,  0.5f, 0.5f }, { 0.0f, 0.0f, 0.0f },  {1.0f , 0.0f} },
+{   { -0.5f, -0.5f, -0.5f }, { 0.0f, 0.0f, 0.0f }, {0.0f , 0.0f} },
+{   { 0.5f, -0.5f, -0.5f }, { 0.0f, 0.0f, 0.0f },  {1.0f , 1.0f} },
+{   { 0.5f,  0.5f, -0.5f }, { 0.0f, 0.0f, 0.0f },  {1.0f , 0.0f} },
+{   { -0.5f,  0.5f, -0.5f }, { 0.0f, 0.0f, 0.0f }, {0.0f , 1.0f} },
+    };
+
     vertex CornerPointDuplicates[36] = {
         //z axis positive cube face
            { { 0.5f,  0.5f, 0.5f }, { 1.0f, 0.0f, 0.0f }, {1.0f , 0.0f} },  //0
@@ -451,9 +461,53 @@ public:
     v3 acceleration[8] = { {0,0,0},{0,0,0},{0,0,0},{0,0,0},{0,0,0},{0,0,0},{0,0,0},{0,0,0} };
     v3 forces[8] = { {0,0,0},{0,0,0},{0,0,0},{0,0,0},{0,0,0},{0,0,0},{0,0,0},{0,0,0} };
     float w[8] = { 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, };
+    m3 Rot;
+    void init() {
+        Rot.setIdentity(3, 3);
+        //InvI0 = (v3(1.0, 1.0, 1.0) / 6.0 ); 
+        //InvI0 = InvI0.inverse();
+        m3 temp {
 
+            {6.0, 0.0,0.0},
+            {0.0,6.0,0.0},
+            {0.0,0.0,6.0}
+        };
+        InvI0 = temp;
+    }
+    void updatePos(float deltaTime) {
+        for (int i = 0; i < 8; i++) {
+            Points[i].Position = CenterOfMassLoc + baseMesh[i].Position;
+            Points[i].Position = Rot * Points[i].Position;
+
+        }
+        v3 omega = Rot * InvI0 * Rot.transpose() * AngularMomentum;
+        //https://en.wikipedia.org/wiki/Skew-symmetric_matrix#Cross_product
+        m3 crossProductMatrixOmega
+        {
+        {0.0, -omega[2], omega[1]},
+        {omega[2], 0.0, -omega[0]},
+        {-omega[1], omega[0], 0.0},
+        };
+        Rot += deltaTime * crossProductMatrixOmega * Rot;
+        CenterOfMassLoc = CenterOfMassLoc + (deltaTime * velocity);
+        
+
+    
+    }
+    m3 InvI0;
+
+    v3 AngularMomentum = {0.0,0.0,0.0};
+    v3 LinearMomentum = {0.0,0.0,0.0};
+    v3 velocity = { 0.0,0.0,0.0 };
+    v3 omega = {0.0,0.0,0.0};
+    v3 CenterOfMassLoc = {0.0,0.0,0.0};
 
 };
+void updateCube(model cube) {
+
+
+
+}
 static void collisionConstraint(v3& x0, v3 x1, v3 N, float invM, float& lambdaN, float& lambdaT, float MuS, v3 p0p) {
     float C = (x0 - x1).dot(N);
     if (C < 0) {
@@ -471,32 +525,32 @@ static void collisionConstraint(v3& x0, v3 x1, v3 N, float invM, float& lambdaN,
             deltaX -= deltapt;
         }
 
-        x0 += deltaX;   
+        x0 += deltaX;
 
     }
 
 }
 
-static void distanceConstraint(v3& x0, v3& x1, float & lambda, float invM0, float invM1, float InitialLength, float alpha) {
-    
+static void distanceConstraint(v3& x0, v3& x1, float& lambda, float invM0, float invM1, float InitialLength, float alpha) {
+
     v3 diff = x0 - x1;
     float dist = diff.norm();
     v3 dir;
-        if (dist  == 0) {
-            dir = v3(0.0, 1.0, 0.0);
+    if (dist == 0) {
+        dir = v3(0.0, 1.0, 0.0);
 
-        }
-        else {
-            dir = diff / dist;
-        }
-        float Cj = dist - InitialLength;
-        if (Cj != 0) {
-            float deltaLambda = (-Cj - alpha *(lambda)) / (invM0 + invM1 + alpha);
-            x0 = x0 + ((invM0 * deltaLambda) * dir);
-            x1 = x1 - ((invM0 * deltaLambda) * dir);
-            lambda += deltaLambda;
-            
-        }
+    }
+    else {
+        dir = diff / dist;
+    }
+    float Cj = dist - InitialLength;
+    if (Cj != 0) {
+        float deltaLambda = (-Cj - alpha * (lambda)) / (invM0 + invM1 + alpha);
+        x0 = x0 + ((invM0 * deltaLambda) * dir);
+        x1 = x1 - ((invM0 * deltaLambda) * dir);
+        lambda += deltaLambda;
+
+    }
 }
 //distanceConstraint(Position[0],Position[1],,1.0,1.0,1.0,1000)
 class softBodyTriangle {
@@ -523,7 +577,7 @@ public:
 
 };
 static std::vector <objectFace> PlaneFaces = {
-    objectFace(4,1,5)
+    objectFace(2,1,4)
 
 };
 
@@ -537,7 +591,7 @@ static std::vector <objectFace> StaticWall1Faces = {
     objectFace(20,19,22), //x axis positive cube face
     objectFace(26,28,25), //x axis negative cube face
 
-    
+
 };
 
 static std::vector <objectFace> StaticWall2Faces = {
@@ -547,38 +601,23 @@ static std::vector <objectFace> StaticWall2Faces = {
     objectFace(44,43,46), //z axis positive cube face
     objectFace(50,52,49), //z axis negative cube face
 
-
-    objectFace(62,61,64), //x axis positive cube face
-    objectFace(56,58,55), //x axis negative cube face
+    objectFace(56,58,55), //x axis positive cube face
+    objectFace(62,61,64), //x axis negative cube face
 
 
 };
 
 static std::vector <objectFace> StaticWall3Faces = {
-    objectFace(102,103, 106), //y axis positive cube face
-    objectFace(108,112,109), //y axis negative cube face
+    objectFace(68,70,67), //y axis positive cube face
+    objectFace(74,73,76), //y axis negative cube face
 
-    objectFace(80,79,82), //z axis positive cube face
-    objectFace(86,88,85), //z axis negative cube face
+    objectFace(44,43,46), //z axis positive cube face
+    objectFace(50,52,49), //z axis negative cube face
 
-    objectFace(92,91,94), //x axis positive cube face
-    objectFace(98,100,97), //x axis negative cube face
+    objectFace(56,58,55), //x axis positive cube face
+    objectFace(62,61,64), //x axis negative cube face
 
 
-};
-
-static std::vector <objectFace> StaticRampFaces = {
-    
-
-    objectFace(131,130, 127), //y axis positive cube face
-    objectFace(132,136,133), //y axis negative cube face
-
-    objectFace(116,118,115), //z axis negative cube face
-
-    objectFace(120,121,122), //x axis positive cube face
-    objectFace(123,125,124), //x axis negative cube face
-
-    
 };
 
 static std::vector <objectFace> DynamicCubeFaces = {
@@ -606,70 +645,69 @@ public:
 static vertex plane[] = {
 
     //plane
-     { { 40.0f,  0.0f, 40.0f }, { 0.0f, 1.0f, 0.0f }, {10.0f , 0.0f} }, //no difference whether 10, 0 is first of 0, 10 is first the numbers just have to mirror each other 
-    { { -40.0f, 0.0f, 40.0f }, { 0.0f, 1.0f, 0.0f }, {0.0f , 0.0f} },   //corner of triangle is 0, 0?
-    { { -40.0f, 0.0f, -40.0f }, { 0.0f, 1.0f, 0.0f }, {0.0f , 10.0f} },
+     { { 5.0f,  0.0f, 5.0f }, { 0.0f, 1.0f, 0.0f }, {10.0f , 0.0f} }, //no difference whether 10, 0 is first of 0, 10 is first the numbers just have to mirror each other 
+    { { -5.0f, 0.0f, 5.0f }, { 0.0f, 1.0f, 0.0f }, {0.0f , 0.0f} },   //corner of triangle is 0, 0?
+    { { -5.0f, 0.0f, -5.0f }, { 0.0f, 1.0f, 0.0f }, {0.0f , 10.0f} },
 
-    { { 10.0f,  0.0f, 10.0f }, { 0.0f, 1.0f, 0.0f }, {10.0f , 0.0f} },
-    { { -10.0f, 0.0f, -10.0f }, { 0.0f, 1.0f, 0.0f }, {0.0f , 10.0f} },
-    { { 10.0f, 0.0f, -10.0f }, { 0.0f, 1.0f, 0.0f }, {10.0f , 10.0f} },
-
+    { { 5.0f,  0.0f, 5.0f }, { 0.0f, 1.0f, 0.0f }, {0.0f , 10.0f} },
+    { { 5.0f, 0.0f, -5.0f }, { 0.0f, 1.0f, 0.0f }, {0.0f , 0.0f} },
+    { { -5.0f, 0.0f, -5.0f }, { 0.0f, 1.0f, 0.0f }, {10.0f , 0.0f} },
 
     //wall 1
  //z axis positive cube face
- { { 11.0f,  4.0f, 13.0f }, { 0.0f, 0.0f, 1.0f }, {1.0f , 0.0f} }, //6
- { { 9.0f,  4.0f, 13.0f }, { 0.0f, 0.0f, 1.0f }, {0.0f , 0.0f} },
- { { 9.0f,  -1.0f, 13.0f }, { 0.0f, 0.0f, 1.0f }, {0.0f , 1.0f} },
+ { { 5.5f,  2.0f, 6.5f }, { 0.0f, 0.0f, 1.0f }, {1.0f , 0.0f} }, //6
+ { { 4.5f,  2.0f, 6.5f }, { 0.0f, 0.0f, 1.0f }, {0.0f , 0.0f} },
+ { { 4.5f,  -1.0f, 6.5f }, { 0.0f, 0.0f, 1.0f }, {0.0f , 1.0f} },
 
- { { 11.0f,  4.0f, 13.0f },  { 0.0f, 0.0f, 1.0f }, {1.0f , 0.0f} }, //9
- { { 11.0f,  -1.0f, 13.0f }, { 0.0f, 0.0f, 1.0f }, {0.0f , 0.0f}  },
- { { 9.0f,  -1.0f, 13.0f }, { 0.0f, 0.0f, 1.0f }, {0.0f , 1.0f} },
+ { { 5.5f,  2.0f, 6.5f },  { 0.0f, 0.0f, 1.0f }, {1.0f , 0.0f} }, //9
+ { { 5.5f,  -1.0f, 6.5f }, { 0.0f, 0.0f, 1.0f }, {0.0f , 0.0f}  },
+ { { 4.5f,  -1.0f, 6.5f }, { 0.0f, 0.0f, 1.0f }, {0.0f , 1.0f} },
 
  //z axis negative cube face
- { { 11.0f,  4.0f,-1.0f }, { 0.0f, 0.0f, -1.0f }, {1.0f , 0.0f} }, //12
- { { 9.0f,  4.0f, -1.0f }, { 0.0f, 0.0f, -1.0f }, {0.0f , 0.0f} },
- { { 9.0f,  -1.0f,-1.0f }, { 0.0f, 0.0f,-1.0f }, {0.0f , 1.0f} },
+ { { 5.5f,  2.0f, -0.5f }, { 0.0f, 0.0f, -1.0f }, {1.0f , 0.0f} }, //12
+ { { 4.5f,  2.0f, -0.5f }, { 0.0f, 0.0f, -1.0f }, {0.0f , 0.0f} },
+ { { 4.5f,  -1.0f, -0.5f }, { 0.0f, 0.0f,-1.0f }, {0.0f , 1.0f} },
 
- { { 11.0f,  4.0f, -1.0f }, { 0.0f, 0.0f,  -1.0f }, {1.0f , 0.0f} }, //15
- { { 11.0f,  -1.0f,-1.0f }, { 0.0f, 0.0f, -1.0f }, {0.0f , 0.0f} },
- { { 9.0f,  -1.0f, -1.0f }, { 0.0f, 0.0f,  -1.0f }, {0.0f , 1.0f} },
+ { { 5.5f,  2.0f, -0.5f }, { 0.0f, 0.0f,  -1.0f }, {1.0f , 0.0f} }, //15
+ { { 5.5f,  -1.0f, -0.5f }, { 0.0f, 0.0f, -1.0f }, {0.0f , 0.0f} },
+ { { 4.5f,  -1.0f, -0.5f }, { 0.0f, 0.0f,  -1.0f }, {0.0f , 1.0f} },
 
  //x axis positive cube face
- { { 11.0f,  4.0f,  13.0f },  { 1.0f, 0.0f, 0.0f }, {1.0f , 0.0f} }, //18
- { { 11.0f,  4.0f, -1.0f }, { 1.0f, 0.0f, 0.0f }, {0.0f , 0.0f} },
- { { 11.0f,  -1.0f, -1.0f }, { 1.0f, 0.0f, 0.0f }, {0.0f , 1.0f} },
+ { { 5.5f,  2.0f,  6.5f },  { 1.0f, 0.0f, 0.0f }, {1.0f , 0.0f} }, //18
+ { { 5.5f,  2.0f, -0.5f }, { 1.0f, 0.0f, 0.0f }, {0.0f , 0.0f} },
+ { { 5.5f,  -1.0f, -0.5f }, { 1.0f, 0.0f, 0.0f }, {0.0f , 1.0f} },
 
- { { 11.0f,  4.0f,   13.0f },  { 1.0f, 0.0f, 0.0f }, {1.0f , 0.0f} }, //21
- { { 11.0f,  -1.0f, 13.0f }, { 1.0f, 0.0f, 0.0f }, {0.0f , 0.0f} },
- { { 11.0f,  -1.0f, -1.0f }, { 1.0f, 0.0f, 0.0f }, {0.0f , 1.0f} },
+ { { 5.5f,  2.0f,  6.5f },  { 1.0f, 0.0f, 0.0f }, {1.0f , 0.0f} }, //21
+ { { 5.5f,   -1.0f, 6.5f }, { 1.0f, 0.0f, 0.0f }, {0.0f , 0.0f} },
+ { { 5.5f,   -1.0f, -0.5f }, { 1.0f, 0.0f, 0.0f }, {0.0f , 1.0f} },
 
  //x axis negative cube face
- { { 9.0f,  4.0f,  13.0f },  { -1.0f, 0.0f, 0.0f }, {1.0f , 0.0f} }, //24
- { { 9.0f,  4.0f, -1.0f }, { -1.0f, 0.0f, 0.0f }, {0.0f , 0.0f} },
- { { 9.0f,  -1.0f, -1.0f }, { -1.0f, 0.0f, 0.0f }, {0.0f , 1.0f} },
+ { { 4.5f,  2.0f,  6.5f },  { -1.0f, 0.0f, 0.0f }, {1.0f , 0.0f} }, //24
+ { { 4.5f,  2.0f, -0.5f }, { -1.0f, 0.0f, 0.0f }, {0.0f , 0.0f} },
+ { { 4.5f,  -1.0f, -0.5f }, { -1.0f, 0.0f, 0.0f }, {0.0f , 1.0f} },
 
- { { 9.0f,  4.0f,  13.0f },  { -1.0f, 0.0f, 0.0f }, {1.0f , 0.0f} }, //27
- { { 9.0f,  -1.0f, 13.0f }, { -1.0f, 0.0f, 0.0f }, {0.0f , 0.0f} },
- { { 9.0f,  -1.0f, -1.0f }, { -1.0f, 0.0f, 0.0f }, {0.0f , 1.0f} },
+ { { 4.5f,  2.0f,  6.5f },  { -1.0f, 0.0f, 0.0f }, {1.0f , 0.0f} }, //27
+ { { 4.5f,   -1.0f, 6.5f }, { -1.0f, 0.0f, 0.0f }, {0.0f , 0.0f} },
+ { { 4.5f,   -1.0f, -0.5f }, { -1.0f, 0.0f, 0.0f }, {0.0f , 1.0f} },
 
  //y axis positive cube face
-{ { 11.0f,  4.0f, 13.0f }, { 0.0f, 1.0f, 0.0f }, {1.0f , 0.0f} }, //30
-{ { 9.0f,   4.0f, 13.0f }, { 0.0f, 1.0f, 0.0f }, {0.0f , 0.0f} },
-{ { 9.0f,   4.0f, -1.0f }, { 0.0f, 1.0f, 0.0f }, {0.0f , 1.0f} },
+{ {  5.5f,  2.0f, 6.5f }, { 0.0f, 1.0f, 0.0f }, {1.0f , 0.0f} }, //30
+{ { 4.5f,   2.0f, 6.5f }, { 0.0f, 1.0f, 0.0f }, {0.0f , 0.0f} },
+{ { 4.5f,  2.0f, -0.5f }, { 0.0f, 1.0f, 0.0f }, {0.0f , 1.0f} },
 
-{ { 11.0f,  4.0f, 13.0f }, { 0.0f, 1.0f, 0.0f }, {1.0f , 0.0f} }, //33
-{ { 11.0f,  4.0f, -1.0f }, { 0.0f, 1.0f, 0.0f }, {0.0f , 0.0f} },
-{ { 9.0f,   4.0f, -1.0f }, { 0.0f, 1.0f, 0.0f }, {0.0f , 1.0f} },
+{ {  5.5f,  2.0f, 6.5f }, { 0.0f, 1.0f, 0.0f }, {1.0f , 0.0f} }, //33
+{ {  5.5f,  2.0f, -0.5f }, { 0.0f, 1.0f, 0.0f }, {0.0f , 0.0f} },
+{ { 4.5f,   2.0f, -0.5f }, { 0.0f, 1.0f, 0.0f }, {0.0f , 1.0f} },
 
 
 //y axis negative cube face
-{ { 11.0f,  -1.0f, 13.0f }, { 0.0f, -1.0f, 0.0f }, {1.0f , 0.0f} }, //36
-{ { 9.0f,   -1.0f, 13.0f }, { 0.0f, -1.0f, 0.0f }, {0.0f , 0.0f} },
-{ { 9.0f,   -1.0f, -1.0f }, { 0.0f, -1.0f, 0.0f }, {0.0f , 1.0f} },
+{ {  5.5f,  -1.0f, 6.5f }, { 0.0f, -1.0f, 0.0f }, {1.0f , 0.0f} }, //36
+{ { 4.5f,   -1.0f, 6.5f }, { 0.0f, -1.0f, 0.0f }, {0.0f , 0.0f} },
+{ { 4.5f,   -1.0f, -0.5f }, { 0.0f, -1.0f, 0.0f }, {0.0f , 1.0f} },
 
-{ { 11.0f,   -1.0f, 13.0f }, { 0.0f, -1.0f, 0.0f }, {1.0f , 0.0f} }, //39
-{ { 11.0f,   -1.0f, -1.0f }, { 0.0f, -1.0f, 0.0f }, {0.0f , 0.0f} },
-{ { 9.0f,    -1.0f, -1.0f }, { 0.0f, -1.0f, 0.0f }, {0.0f , 1.0f} },
+{ {  5.5f,   -1.0f, 6.5f }, { 0.0f, -1.0f, 0.0f }, {1.0f , 0.0f} }, //39
+{ {  5.5f,   -1.0f, -0.5f }, { 0.0f, -1.0f, 0.0f }, {0.0f , 0.0f} },
+{ { 4.5f,    -1.0f, -0.5f }, { 0.0f, -1.0f, 0.0f }, {0.0f , 1.0f} },
 
 
 
@@ -737,113 +775,116 @@ static vertex plane[] = {
 //Wall 3
 
 //z axis positive cube face
- { { -4.5f,  3.0f, 9.5f }, { 0.0f, 0.0f, 1.0f }, {1.0f , 0.0f} }, //78
+ { { -4.5f,  3.0f, 9.5f }, { 0.0f, 0.0f, 1.0f }, {1.0f , 0.0f} }, //42
  { { 4.5f,  3.0f, 9.5f }, { 0.0f, 0.0f, 1.0f }, {0.0f , 0.0f} },
  { { 4.5f,  -1.0f, 9.5f }, { 0.0f, 0.0f, 1.0f }, {0.0f , 1.0f} },
 
- { { -4.5f,  3.0f, 9.5f },  { 0.0f, 0.0f, 1.0f }, {1.0f , 0.0f} }, //81
+ { { -4.5f,  3.0f, 9.5f },  { 0.0f, 0.0f, 1.0f }, {1.0f , 0.0f} }, //45
  { { -4.5f,  -1.0f, 9.5f }, { 0.0f, 0.0f, 1.0f }, {0.0f , 0.0f} },
  { { 4.5f,  -1.0f, 9.5f }, { 0.0f, 0.0f, 1.0f }, {0.0f , 1.0f} },
 
  //z axis negative cube face
- { { -4.5f,  3.0f, 6.5f }, { 0.0f, 0.0f, -1.0f }, {1.0f , 0.0f} }, //84
+ { { -4.5f,  3.0f, 6.5f }, { 0.0f, 0.0f, -1.0f }, {1.0f , 0.0f} }, //48
  { { 4.5f,  3.0f, 6.5f }, { 0.0f, 0.0f, -1.0f }, {0.0f , 0.0f} },
  { { 4.5f,  -1.0f, 6.5f }, { 0.0f, 0.0f,-1.0f }, {0.0f , 1.0f} },
 
- { { -4.5f,  3.0f, 6.5f }, { 0.0f, 0.0f,  -1.0f }, {1.0f , 0.0f} }, //87
+ { { -4.5f,  3.0f, 6.5f }, { 0.0f, 0.0f,  -1.0f }, {1.0f , 0.0f} }, //51
  { { -4.5f,  -1.0f, 6.5f }, { 0.0f, 0.0f, -1.0f }, {0.0f , 0.0f} },
  { { 4.5f,  -1.0f, 6.5f }, { 0.0f, 0.0f,  -1.0f }, {0.0f , 1.0f} },
 
  //x axis positive cube face
- { { 4.5f,  3.0f,  9.5f },  { 1.0f, 0.0f, 0.0f }, {1.0f , 0.0f} }, //90
+ { { 4.5f,  3.0f,  9.5f },  { 1.0f, 0.0f, 0.0f }, {1.0f , 0.0f} }, //18
  { { 4.5f,  3.0f, 6.5f }, { 1.0f, 0.0f, 0.0f }, {0.0f , 0.0f} },
  { { 4.5f,  -1.0f, 6.5f }, { 1.0f, 0.0f, 0.0f }, {0.0f , 1.0f} },
 
- { { 4.5f,  3.0f,  9.5f },  { 1.0f, 0.0f, 0.0f }, {1.0f , 0.0f} }, //93
+ { { 4.5f,  3.0f,  9.5f },  { 1.0f, 0.0f, 0.0f }, {1.0f , 0.0f} }, //21
  { { 4.5f,   -1.0f, 9.5f }, { 1.0f, 0.0f, 0.0f }, {0.0f , 0.0f} },
  { { 4.5f,   -1.0f, 6.5f }, { 1.0f, 0.0f, 0.0f }, {0.0f , 1.0f} },
 
  //x axis negative cube face
- { { -4.5f,  3.0f,  9.5f },  { -1.0f, 0.0f, 0.0f }, {1.0f , 0.0f} }, //96
- { { -4.5f,  3.0f, 6.5f }, { -1.0f, 0.0f, 0.0f }, {0.0f , 0.0f} },
- { { -4.5f,  -1.0f, 6.5f }, { -1.0f, 0.0f, 0.0f }, {0.0f , 1.0f} },
+ { { 4.5f,  3.0f,  9.5f },  { -1.0f, 0.0f, 0.0f }, {1.0f , 0.0f} }, //24
+ { { 4.5f,  3.0f, 6.5f }, { -1.0f, 0.0f, 0.0f }, {0.0f , 0.0f} },
+ { { 4.5f,  -1.0f, 6.5f }, { -1.0f, 0.0f, 0.0f }, {0.0f , 1.0f} },
 
- { { -4.5f,  3.0f,  9.5f },  { -1.0f, 0.0f, 0.0f }, {1.0f , 0.0f} }, //99
- { { -4.5f,   -1.0f, 9.5f }, { -1.0f, 0.0f, 0.0f }, {0.0f , 0.0f} },
- { { -4.5f,   -1.0f, 6.5f }, { -1.0f, 0.0f, 0.0f }, {0.0f , 1.0f} },
+ { { 4.5f,  3.0f,  9.5f },  { -1.0f, 0.0f, 0.0f }, {1.0f , 0.0f} }, //27
+ { { 4.5f,   -1.0f, 9.5f }, { -1.0f, 0.0f, 0.0f }, {0.0f , 0.0f} },
+ { { 4.5f,   -1.0f, 6.5f }, { -1.0f, 0.0f, 0.0f }, {0.0f , 1.0f} },
 
  //y axis positive cube face
- { {  -4.5f,  3.0f, 9.5f }, { 0.0f, 1.0f, 0.0f }, {1.0f , 0.0f} }, //102
+ { {  -4.5f,  3.0f, 9.5f }, { 0.0f, 1.0f, 0.0f }, {1.0f , 0.0f} }, //30
  { { 4.5f,   3.0f, 9.5f }, { 0.0f, 1.0f, 0.0f }, {0.0f , 0.0f} },
  { { 4.5f,  3.0f, 6.5f }, { 0.0f, 1.0f, 0.0f }, {0.0f , 1.0f} },
 
- { {  -4.5f,  3.0f, 9.5f }, { 0.0f, 1.0f, 0.0f }, {1.0f , 0.0f} }, //105
+ { {  -4.5f,  3.0f, 9.5f }, { 0.0f, 1.0f, 0.0f }, {1.0f , 0.0f} }, //33
  { {  -4.5f,  3.0f, 6.5f }, { 0.0f, 1.0f, 0.0f }, {0.0f , 0.0f} },
  { { 4.5f,   3.0f, 6.5f }, { 0.0f, 1.0f, 0.0f }, {0.0f , 1.0f} },
 
 
  //y axis negative cube face
- { {  -4.5f,  -1.0f, 9.5f }, { 0.0f, -1.0f, 0.0f }, {1.0f , 0.0f} }, //108
+ { {  -4.5f,  -1.0f, 9.5f }, { 0.0f, -1.0f, 0.0f }, {1.0f , 0.0f} }, //36
  { { 4.5f,   -1.0f, 9.5f }, { 0.0f, -1.0f, 0.0f }, {0.0f , 0.0f} },
  { { 4.5f,   -1.0f, 6.5f }, { 0.0f, -1.0f, 0.0f }, {0.0f , 1.0f} },
 
- { {  -4.5f,   -1.0f, 9.5f }, { 0.0f, -1.0f, 0.0f }, {1.0f , 0.0f} }, //111
+ { {  -4.5f,   -1.0f, 9.5f }, { 0.0f, -1.0f, 0.0f }, {1.0f , 0.0f} }, //39
  { {  -4.5f,   -1.0f, 6.5f }, { 0.0f, -1.0f, 0.0f }, {0.0f , 0.0f} },
  { { 4.5f,    -1.0f, 6.5f }, { 0.0f, -1.0f, 0.0f }, {0.0f , 1.0f} },
 
 
 
 
-    //Wall 4
+ //Wall 4
 
-    //z axis positive cube face
+ //z axis positive cube face
 
 
 //z axis negative cube face
-{ { -4.5f,  6.0f, -7.0f }, { 0.0f, 0.0f, -1.0f }, {1.0f , 0.0f} }, //114
-{ { 4.5f,  6.0f, -7.0f }, { 0.0f, 0.0f, -1.0f }, {0.0f , 0.0f} },
-{ { 4.5f,  -1.0f, -7.0f }, { 0.0f, 0.0f,-1.0f }, {0.0f , 1.0f} },
+{ { -4.5f,  3.0f, -3.5f }, { 0.0f, 0.0f, -1.0f }, {1.0f , 0.0f} }, //48
+{ { 4.5f,  3.0f, -3.5f }, { 0.0f, 0.0f, -1.0f }, {0.0f , 0.0f} },
+{ { 4.5f,  -1.0f, -3.5f }, { 0.0f, 0.0f,-1.0f }, {0.0f , 1.0f} },
 
-{ { -4.5f,  6.0f, -7.0f }, { 0.0f, 0.0f,  -1.0f }, {1.0f , 0.0f} }, //117
-{ { -4.5f,  -1.0f, -7.0f }, { 0.0f, 0.0f, -1.0f }, {0.0f , 0.0f} },
-{ { 4.5f,  -1.0f, -7.0f }, { 0.0f, 0.0f,  -1.0f }, {0.0f , 1.0f} },
+{ { -4.5f,  3.0f, -3.5f }, { 0.0f, 0.0f,  -1.0f }, {1.0f , 0.0f} }, //51
+{ { -4.5f,  -1.0f, -3.5f }, { 0.0f, 0.0f, -1.0f }, {0.0f , 0.0f} },
+{ { 4.5f,  -1.0f, -3.5f }, { 0.0f, 0.0f,  -1.0f }, {0.0f , 1.0f} },
 
 //x axis positive cube face
+{ { 4.5f,  3.0f,  -1.5f },  { 1.0f, 0.0f, 0.0f }, {1.0f , 0.0f} }, //18
+{ { 4.5f,  3.0f, -3.5f }, { 1.0f, 0.0f, 0.0f }, {0.0f , 0.0f} },
+{ { 4.5f,  -1.0f, -3.5f }, { 1.0f, 0.0f, 0.0f }, {0.0f , 1.0f} },
 
-{ { 4.5f,  6.0f,  -7.0f },  { 1.0f, 0.0f, 0.0f }, {1.0f , 0.0f} }, //120
+{ { 4.5f,  3.0f,  -1.5f },  { 1.0f, 0.0f, 0.0f }, {1.0f , 0.0f} }, //21
 { { 4.5f,   -1.0f, -1.5f }, { 1.0f, 0.0f, 0.0f }, {0.0f , 0.0f} },
-{ { 4.5f,   -1.0f, -7.0f }, { 1.0f, 0.0f, 0.0f }, {0.0f , 1.0f} },
+{ { 4.5f,   -1.0f, -3.5f }, { 1.0f, 0.0f, 0.0f }, {0.0f , 1.0f} },
 
 //x axis negative cube face
-{ { -4.5f,  6.0f,  -7.0f },  { -1.0f, 0.0f, 0.0f }, {1.0f , 0.0f} }, //123
+{ { -4.5f,  3.0f,  -3.5f },  { -1.0f, 0.0f, 0.0f }, {1.0f , 0.0f} }, //24
 { { -4.5f,  -1.0f, -1.5f }, { -1.0f, 0.0f, 0.0f }, {0.0f , 0.0f} },
-{ { -4.5f,  -1.0f, -7.0f }, { -1.0f, 0.0f, 0.0f }, {0.0f , 1.0f} },
+{ { -4.5f,  -1.0f, -3.5f }, { -1.0f, 0.0f, 0.0f }, {0.0f , 1.0f} },
 
 
 //y axis positive cube face
-{ {  -4.5f,  -1.0f, -1.5f }, { 0.0f, 0.44f, 0.89f }, {1.0f , 0.0f} }, //126
-{ { 4.5f,   -1.0f, -1.5f }, { 0.0f,  0.44f, 0.89f }, {0.0f , 0.0f} },
-{ { 4.5f,  6.0f, -7.0f}, { 0.0f, 0.44f, 0.89f}, {0.0f , 1.0f} },
+{ {  -4.5f,  -1.0f, -1.5f }, { 0.0f, 1.0f, 0.0f }, {1.0f , 0.0f} }, //30
+{ { 4.5f,   -1.0f, -1.5f }, { 0.0f, 1.0f, 0.0f }, {0.0f , 0.0f} },
+{ { 4.5f,  3.0f, -3.5f }, { 0.0f, 1.0f, 0.0f }, {0.0f , 1.0f} },
 
-{ {  -4.5f,  -1.0f, -1.5f }, { 0.0f,  0.44f, 0.89f }, {1.0f , 0.0f} }, //129
-{ {  -4.5f, 6.0f, -7.0f }, { 0.0f,  0.44f, 0.89f }, {0.0f , 0.0f} },
-{ { 4.5f,   6.0f, -7.0f }, { 0.0f,  0.44f, 0.89f }, {0.0f , 1.0f} },
+{ {  -4.5f,  -1.0f, -1.5f }, { 0.0f, 1.0f, 0.0f }, {1.0f , 0.0f} }, //33
+{ {  -4.5f,  3.0f, -3.5f }, { 0.0f, 1.0f, 0.0f }, {0.0f , 0.0f} },
+{ { 4.5f,   3.0f, -3.5f }, { 0.0f, 1.0f, 0.0f }, {0.0f , 1.0f} },
 
 
 //y axis negative cube face
-{ {  -4.5f,  -1.0f, -1.5f }, { 0.0f, -1.0f, 0.0f }, {1.0f , 0.0f} }, //132
+{ {  -4.5f,  -1.0f, -1.5f }, { 0.0f, -1.0f, 0.0f }, {1.0f , 0.0f} }, //36
 { { 4.5f,   -1.0f, -1.5f }, { 0.0f, -1.0f, 0.0f }, {0.0f , 0.0f} },
-{ { 4.5f,   -1.0f, -7.0f }, { 0.0f, -1.0f, 0.0f }, {0.0f , 1.0f} },
+{ { 4.5f,   -1.0f, -3.5f }, { 0.0f, -1.0f, 0.0f }, {0.0f , 1.0f} },
 
-{ {  -4.5f,   -1.0f, -1.5f }, { 0.0f, -1.0f, 0.0f }, {1.0f , 0.0f} }, //135
-{ {  -4.5f,   -1.0f, -7.0f }, { 0.0f, -1.0f, 0.0f }, {0.0f , 0.0f} },
-{ { 4.5f,    -1.0f, -7.0f }, { 0.0f, -1.0f, 0.0f }, {0.0f , 1.0f} },
+{ {  -4.5f,   -1.0f, -1.5f }, { 0.0f, -1.0f, 0.0f }, {1.0f , 0.0f} }, //39
+{ {  -4.5f,   -1.0f, -3.5f }, { 0.0f, -1.0f, 0.0f }, {0.0f , 0.0f} },
+{ { 4.5f,    -1.0f, -3.5f }, { 0.0f, -1.0f, 0.0f }, {0.0f , 1.0f} },
 
 };
 
 
 
-static void scanForCollisionsWithSurfaces(v3 x0, bool& colFound, collision& col, static vertex plane[], static std::vector <objectFace> StaticCubeFaces, int midPointFaceIndex=0, v3 midPointOfFace = {}, bool midPointOfFaceRequired = false) {
+static void scanForCollisionsWithSurfaces(v3 x0, bool& colFound, collision& col, static vertex plane[], static std::vector <objectFace> StaticCubeFaces) {
     /*
     colFound = true;
     for (int i = 0; i < PlaneFaces.size() && colFound; i++) {
@@ -863,13 +904,13 @@ static void scanForCollisionsWithSurfaces(v3 x0, bool& colFound, collision& col,
         float dist = v.dot(-PlaneFaces[i].normal);//normal has to be negative since we're looking inwards
         //dot product used to accurately find distance for use in cases with more complex normal vectors
         //if this is smallest distance it will be the collision point {
-        
+
         col.point = x0 - dist * -PlaneFaces[i].normal;//normal has to be negative since we're looking inwards
         col.normal = PlaneFaces[i].normal;
         std::cout << "object collision point " << col.point << std::endl;
     }
     */
-   
+
     for (int i = 0; i < StaticCubeFaces.size() && colFound; i++) {
         v3 a = plane[StaticCubeFaces[i].PositionIndexA].Position - plane[StaticCubeFaces[i].PositionIndex0].Position;
         v3 b = plane[StaticCubeFaces[i].PositionIndexB].Position - plane[StaticCubeFaces[i].PositionIndex0].Position;
@@ -877,24 +918,9 @@ static void scanForCollisionsWithSurfaces(v3 x0, bool& colFound, collision& col,
         cross.normalize();
         //std::cout << "object face cross product " << cross << std::endl;
         StaticCubeFaces[i].normal = cross;
-        if (midPointOfFaceRequired and i == midPointFaceIndex) {
-        
-            if ((midPointOfFace - (x0 + 0.05 * StaticCubeFaces[i].normal)).norm() > (midPointOfFace - x0).norm()) {
-               colFound = false;
-               //std::cout << "this " << (midPointOfFace - (x0 + 0.05 * StaticCubeFaces[i].normal)).norm() << " and this " << (midPointOfFace - x0).norm() << std::endl;
-
-            }
-        }
-        if (!midPointOfFaceRequired or i != midPointFaceIndex) {
-            if ((plane[StaticCubeFaces[i].PositionIndexA].Position - (x0 + 0.005 * StaticCubeFaces[i].normal)).norm() > (plane[StaticCubeFaces[i].PositionIndexA].Position - x0).norm()) {
-                //distance between point x0 and a point of cube face
-                //VALUE USED TO BE 0.005
-                if (midPointOfFaceRequired)
-                std::cout << "COLLISION NOT FOUND "<<cross << std::endl;
-
-
-                colFound = false;
-            }
+        if ((plane[StaticCubeFaces[i].PositionIndexA].Position - (x0 + 0.005 * StaticCubeFaces[i].normal)).norm() > (plane[StaticCubeFaces[i].PositionIndexA].Position - x0).norm()) {
+            //distance between point x0 and a point of cube face
+            colFound = false;
         }
     }
     std::vector <float> distances;
@@ -915,7 +941,7 @@ static void scanForCollisionsWithSurfaces(v3 x0, bool& colFound, collision& col,
     if (colFound) {
         col.point = x0 - minDist * -StaticCubeFaces[minIndex].normal;//normal has to be negative since we're looking inwards
         col.normal = StaticCubeFaces[minIndex].normal;
-        //std::cout << " distance,normal :( " << minDist <<", "<< StaticCubeFaces[minIndex].normal << " )" << std::endl;
+        std::cout << " distance,normal :( " << minDist << ", " << StaticCubeFaces[minIndex].normal << " )" << std::endl;
         //std::cout << "object collision point " << col.point << std::endl;
     }
     // negp1 (-1,0,0) negp2(0,-1,0) negp3(0,0,-1)
@@ -930,7 +956,7 @@ static void scanForCollisionsWithSurfaces(v3 x0, bool& colFound, collision& col,
     // normalised perpendicular vector = (1/sqrt(3), 1/sqrt(3), 1/sqrt(3) )
 
 
-   
+
 }
 
 static int CompileShader(GLuint* Shader, const char* VertexShader, const char* FragmentShader) {
@@ -1030,7 +1056,6 @@ static void MyAudioCallback(void* Userdata, Uint8* Stream, int Len) {
 
     Audio->SamplesDone += SampleCount;
 }
-
 int main(int, char**) {
 
 
@@ -1041,8 +1066,8 @@ int main(int, char**) {
 
     //}
     model Body;
-    
-    
+
+
     if (SDL_Init(SDL_INIT_VIDEO)) {
         fprintf(stderr, "SDL_Init: %s\n", SDL_GetError());
         return -1;
@@ -1077,7 +1102,7 @@ int main(int, char**) {
         return -1;
     }
 
-   
+
 
 
 
@@ -1146,7 +1171,7 @@ int main(int, char**) {
     glEnableVertexAttribArray(1);
     glEnableVertexAttribArray(2);
     //learnopengl---------------------------------------------------------------------
-    
+
 
 
 
@@ -1176,10 +1201,10 @@ int main(int, char**) {
 
 
 
-    
+
     glBindBuffer(GL_ARRAY_BUFFER, 0);
-    
-  
+
+
 
 
 
@@ -1198,7 +1223,7 @@ int main(int, char**) {
     glEnableVertexAttribArray(0);
     glEnableVertexAttribArray(1);
     glEnableVertexAttribArray(2);
-  
+
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 
 
@@ -1208,14 +1233,14 @@ int main(int, char**) {
     glCheck(glEnable(GL_FRAMEBUFFER_SRGB));
     glEnable(GL_DEPTH_TEST);
 
-   
+
     // configure global opengl state
     // -----------------------------
     //glEnable(GL_DEPTH_TEST);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-   
+
     // load textures
     // -------------
     unsigned int floorTexture = loadTexture("C:/Users/User/Downloads/opengl/opengl/opengl/wood.png");
@@ -1223,7 +1248,7 @@ int main(int, char**) {
     // build and compile shaders
     // -------------------------
     Sh shader("C:/Users/User/Downloads/opengl/opengl/opengl/advanced_lighting.vs", "C:/Users/User/Downloads/opengl/opengl/opengl/advanced_lighting.fs");
-   
+
     v3 lightPos(0.0f, 6.0f, 0.0f);
 
 
@@ -1248,9 +1273,9 @@ int main(int, char**) {
     int Running = 1;
 
     int CounterForCols = 0;
-    
+    Body.init();
     while (Running) {
-        
+
         SDL_Event Event;
         LastMouseX = MouseX;
         LastMouseY = MouseY;
@@ -1286,7 +1311,7 @@ int main(int, char**) {
                     break;
                 case SDLK_LEFT:
                     for (int i = 0; i < 8; i++) {
-                        Body.velocities[i](0) -=0.5;
+                        Body.velocities[i](0) -= 0.5;
 
                     }
                     Zoom *= 1.1f;
@@ -1317,7 +1342,7 @@ int main(int, char**) {
                 default:
                     break;
                 }
-               
+
 
 
 
@@ -1357,11 +1382,11 @@ int main(int, char**) {
         m4 V = Translation(v3(0.0f, 0.0f, -CameraRadius)) * M4(RotationX(-AngleX)) * M4(RotationY(-AngleY)) * M4(Scale(1.0f / Zoom));
         m4 P = Perspective(1.39626, WindowWidth / (float)WindowHeight, 0.1f, 100.0f);
 
-       
+
 
         //original shader update during rendering
         //glCheck(glUseProgram(Shader));
-        
+
         //learnopengl--------------------------------------------------------
         shader.use();
         shader.setMat4("projection", P);
@@ -1369,13 +1394,11 @@ int main(int, char**) {
         shader.setMat4("R", R4);
 
         // set light uniforms
-		v3 viewPos(0.0, 0.0, 0.0);
-        shader.setVec3("viewPos", viewPos);
-        shader.setVec3("viewPos", camera.Position);
+        //shader.setVec3("viewPos", camera.Position);
         shader.setVec3("lightPos", lightPos);
         //shader.setInt("blinn", blinn);
         //----------------------------------------------------------------------
-        
+
         for (int i = 0; i < DynamicCubeFaces.size(); i++) {
             v3 a = Body.Points[DynamicCubeFaces[i].PositionIndexA].Position - Body.Points[DynamicCubeFaces[i].PositionIndex0].Position;
             v3 b = Body.Points[DynamicCubeFaces[i].PositionIndexB].Position - Body.Points[DynamicCubeFaces[i].PositionIndex0].Position;
@@ -1384,7 +1407,7 @@ int main(int, char**) {
             //std::cout << "object face cross product " << cross << std::endl;
             DynamicCubeFaces[i].normal = cross;
             if (i == 0) { //y pos normal
-               
+
                 Body.CornerPointDuplicates[24].ShaderNormal = cross;
                 Body.CornerPointDuplicates[25].ShaderNormal = cross;
                 Body.CornerPointDuplicates[26].ShaderNormal = cross;
@@ -1411,15 +1434,15 @@ int main(int, char**) {
                 Body.CornerPointDuplicates[5].ShaderNormal = cross;
             }
             else if (i == 3) {//z neg normal
-               
+
                 Body.CornerPointDuplicates[6].ShaderNormal = cross;
                 Body.CornerPointDuplicates[7].ShaderNormal = cross;
                 Body.CornerPointDuplicates[8].ShaderNormal = cross;
                 Body.CornerPointDuplicates[9].ShaderNormal = cross;
                 Body.CornerPointDuplicates[10].ShaderNormal = cross;
                 Body.CornerPointDuplicates[11].ShaderNormal = cross;
-               
-              
+
+
 
 
             }
@@ -1438,60 +1461,60 @@ int main(int, char**) {
                 Body.CornerPointDuplicates[21].ShaderNormal = cross;
                 Body.CornerPointDuplicates[22].ShaderNormal = cross;
                 Body.CornerPointDuplicates[23].ShaderNormal = cross;
-              
+
 
             }
-           
+
             //std::cout << Body.Points[DynamicCubeFaces[i].PositionIndexA].Position << " position's face cross product: " << cross << std::endl;
         }
 
-            Body.CornerPointDuplicates[0].Position = Body.Points[2].Position;
-            Body.CornerPointDuplicates[1].Position = Body.Points[3].Position;
-            Body.CornerPointDuplicates[2].Position = Body.Points[0].Position;
+        Body.CornerPointDuplicates[0].Position = Body.Points[2].Position;
+        Body.CornerPointDuplicates[1].Position = Body.Points[3].Position;
+        Body.CornerPointDuplicates[2].Position = Body.Points[0].Position;
 
-            Body.CornerPointDuplicates[3].Position = Body.Points[2].Position;
-            Body.CornerPointDuplicates[4].Position = Body.Points[1].Position;
-            Body.CornerPointDuplicates[5].Position = Body.Points[0].Position;
+        Body.CornerPointDuplicates[3].Position = Body.Points[2].Position;
+        Body.CornerPointDuplicates[4].Position = Body.Points[1].Position;
+        Body.CornerPointDuplicates[5].Position = Body.Points[0].Position;
 
-            Body.CornerPointDuplicates[6].Position = Body.Points[6].Position;
-            Body.CornerPointDuplicates[7].Position = Body.Points[7].Position;
-            Body.CornerPointDuplicates[8].Position = Body.Points[4].Position;
+        Body.CornerPointDuplicates[6].Position = Body.Points[6].Position;
+        Body.CornerPointDuplicates[7].Position = Body.Points[7].Position;
+        Body.CornerPointDuplicates[8].Position = Body.Points[4].Position;
 
-            Body.CornerPointDuplicates[9].Position =  Body.Points[6].Position;
-            Body.CornerPointDuplicates[10].Position = Body.Points[5].Position;
-            Body.CornerPointDuplicates[11].Position = Body.Points[4].Position;
+        Body.CornerPointDuplicates[9].Position = Body.Points[6].Position;
+        Body.CornerPointDuplicates[10].Position = Body.Points[5].Position;
+        Body.CornerPointDuplicates[11].Position = Body.Points[4].Position;
 
-            Body.CornerPointDuplicates[12].Position = Body.Points[2].Position;
-            Body.CornerPointDuplicates[13].Position = Body.Points[6].Position;
-            Body.CornerPointDuplicates[14].Position = Body.Points[5].Position;
+        Body.CornerPointDuplicates[12].Position = Body.Points[2].Position;
+        Body.CornerPointDuplicates[13].Position = Body.Points[6].Position;
+        Body.CornerPointDuplicates[14].Position = Body.Points[5].Position;
 
-            Body.CornerPointDuplicates[15].Position = Body.Points[2].Position;
-            Body.CornerPointDuplicates[16].Position = Body.Points[1].Position;
-            Body.CornerPointDuplicates[17].Position = Body.Points[5].Position;
+        Body.CornerPointDuplicates[15].Position = Body.Points[2].Position;
+        Body.CornerPointDuplicates[16].Position = Body.Points[1].Position;
+        Body.CornerPointDuplicates[17].Position = Body.Points[5].Position;
 
-            Body.CornerPointDuplicates[18].Position = Body.Points[3].Position;
-            Body.CornerPointDuplicates[19].Position = Body.Points[7].Position;
-            Body.CornerPointDuplicates[20].Position = Body.Points[4].Position;
+        Body.CornerPointDuplicates[18].Position = Body.Points[3].Position;
+        Body.CornerPointDuplicates[19].Position = Body.Points[7].Position;
+        Body.CornerPointDuplicates[20].Position = Body.Points[4].Position;
 
-            Body.CornerPointDuplicates[21].Position = Body.Points[3].Position;
-            Body.CornerPointDuplicates[22].Position = Body.Points[0].Position;
-            Body.CornerPointDuplicates[23].Position = Body.Points[4].Position;
+        Body.CornerPointDuplicates[21].Position = Body.Points[3].Position;
+        Body.CornerPointDuplicates[22].Position = Body.Points[0].Position;
+        Body.CornerPointDuplicates[23].Position = Body.Points[4].Position;
 
-            Body.CornerPointDuplicates[24].Position = Body.Points[2].Position;
-            Body.CornerPointDuplicates[25].Position = Body.Points[3].Position;
-            Body.CornerPointDuplicates[26].Position = Body.Points[7].Position;
+        Body.CornerPointDuplicates[24].Position = Body.Points[2].Position;
+        Body.CornerPointDuplicates[25].Position = Body.Points[3].Position;
+        Body.CornerPointDuplicates[26].Position = Body.Points[7].Position;
 
-            Body.CornerPointDuplicates[27].Position = Body.Points[2].Position;
-            Body.CornerPointDuplicates[28].Position = Body.Points[6].Position;
-            Body.CornerPointDuplicates[29].Position = Body.Points[7].Position;
+        Body.CornerPointDuplicates[27].Position = Body.Points[2].Position;
+        Body.CornerPointDuplicates[28].Position = Body.Points[6].Position;
+        Body.CornerPointDuplicates[29].Position = Body.Points[7].Position;
 
-            Body.CornerPointDuplicates[30].Position = Body.Points[1].Position;
-            Body.CornerPointDuplicates[31].Position = Body.Points[0].Position;
-            Body.CornerPointDuplicates[32].Position = Body.Points[4].Position;
+        Body.CornerPointDuplicates[30].Position = Body.Points[1].Position;
+        Body.CornerPointDuplicates[31].Position = Body.Points[0].Position;
+        Body.CornerPointDuplicates[32].Position = Body.Points[4].Position;
 
-            Body.CornerPointDuplicates[33].Position = Body.Points[1].Position;
-            Body.CornerPointDuplicates[34].Position = Body.Points[5].Position;
-            Body.CornerPointDuplicates[35].Position = Body.Points[4].Position;
+        Body.CornerPointDuplicates[33].Position = Body.Points[1].Position;
+        Body.CornerPointDuplicates[34].Position = Body.Points[5].Position;
+        Body.CornerPointDuplicates[35].Position = Body.Points[4].Position;
         //glCheck(glUniform2fv(glGetUniformLocation(Shader, "ModelP"), 1, ModelPosition));
 
 
@@ -1517,7 +1540,7 @@ int main(int, char**) {
         //glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
         //glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(cube_elements_indices), cube_elements_indices, GL_DYNAMIC_DRAW);
 
-   
+
         //learnopengl---------------------------------------------------------------------
         //glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (void*)(0));
         //glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (void*)(3 * sizeof(GLfloat)));
@@ -1555,7 +1578,7 @@ int main(int, char**) {
         glCheck(glDrawArrays(GL_TRIANGLES, 0, 150));
         //6 edges points of plane -> 150 6 edges points of plane + 36 of wall_1 + 36 of wall_2 + 36 of wall_3 + 36 of wall_4
         //entire static level's edge points here
-        
+
 
         glCheck(glBindVertexArray(0));
 
@@ -1570,22 +1593,21 @@ int main(int, char**) {
         LastTicks = CurrTicks;
         std::vector <v3> oldpos;
         std::vector <collision> collisions;
-        for (int i = 0; i < 8; i++) {
-            v3 nextVelocity = Body.velocities[i];
-            nextVelocity(1) = Body.velocities[i](1) + DeltaTime * -10;
-            oldpos.push_back(Body.Points[i].Position);
-            Body.Points[i].Position += nextVelocity * DeltaTime;
+        //for (int i = 0; i < 8; i++) {
+            //v3 nextVelocity = Body.velocities[i];
+            //nextVelocity(1) = Body.velocities[i](1) + DeltaTime * -10;
+            //oldpos.push_back(Body.Points[i].Position);
+            //Body.Points[i].Position += nextVelocity * DeltaTime;
 
-        }
+        //}
         for (int i = 0; i < Edges.size(); i++) {
             Edges[i].lambdaLength = 0.0;
         }
-
+        /*
         for (int i = 0; i < 8; i++) {//maybe add points in the middle of edges for the cube, so we cant enter an object with the edge or add collision detection for vertices of static objects either works
             bool colFound = true;
             collision Col;
-            //std::cout << "FLOOR CROSS PRODUCTS " << std::endl;
-             scanForCollisionsWithSurfaces(Body.Points[i].Position, colFound, Col, plane, PlaneFaces);
+            scanForCollisionsWithSurfaces(Body.Points[i].Position, colFound, Col, plane, PlaneFaces);
             if (colFound) {
                 Col.index = i;
                 //Col.point = Body.Points[i].Position;
@@ -1599,87 +1621,66 @@ int main(int, char**) {
 
                 //Body.Points[i].Position(1) = 0;
 
-            } 
-            
-                //std::cout << "WALL 1 CROSS PRODUCTS " << std::endl;
-                colFound = true;
-                scanForCollisionsWithSurfaces(Body.Points[i].Position, colFound, Col, plane, StaticWall1Faces);
-                if (colFound) {
-                    //std::cout << " TRUE";
-                    Col.index = i;
-                    Col.lambdaN = 0;
-                    Col.lambdaT = 0;
-                    collisions.push_back(Col);
-                }
-            
-                //std::cout << "WALL 2 CROSS PRODUCTS " <<std::endl;
-                colFound = true;
-                scanForCollisionsWithSurfaces(Body.Points[i].Position, colFound, Col, plane, StaticWall2Faces);
-                if (colFound) {
-                    //std::cout << " TRUE";
-                    Col.index = i;
-                    Col.lambdaN = 0;
-                    Col.lambdaT = 0;
-                    collisions.push_back(Col);
-                }
-                //std::cout << "WALL 3 CROSS PRODUCTS " <<std::endl;
-                colFound = true;
-                scanForCollisionsWithSurfaces(Body.Points[i].Position, colFound, Col, plane, StaticWall3Faces);
-                if (colFound) {
-                    //std::cout << " TRUE";
-                    Col.index = i;
-                    Col.lambdaN = 0;
-                    Col.lambdaT = 0;
-                    collisions.push_back(Col);
-                }
-                
-                //std::cout << "RAMP CROSS PRODUCTS " <<std::endl;
-                colFound = true;
-                scanForCollisionsWithSurfaces(Body.Points[i].Position, colFound, Col, plane, StaticRampFaces);
-                //scanForCollisionsWithSurfaces(Body.Points[i].Position, colFound, Col, plane, StaticRampFaces, 0, {0.0f,3.0f,-2.75f},true);
-                if (colFound) {
-                    //std::cout << " TRUE";
-                    Col.index = i;
-                    Col.lambdaN = 0;
-                    Col.lambdaT = 0;
-                    collisions.push_back(Col);
-                }
-                
-        }
+            }
+
+            //std::cout << "WALL 1 CROSS PRODUCTS " << std::endl;
+            colFound = true;
+            scanForCollisionsWithSurfaces(Body.Points[i].Position, colFound, Col, plane, StaticWall1Faces);
+            if (colFound) {
+                //std::cout << " TRUE";
+                Col.index = i;
+                Col.lambdaN = 0;
+                Col.lambdaT = 0;
+                collisions.push_back(Col);
+            }
+
+            //std::cout << "WALL 2 CROSS PRODUCTS " <<std::endl;
+            colFound = true;
+            scanForCollisionsWithSurfaces(Body.Points[i].Position, colFound, Col, plane, StaticWall2Faces);
+            if (colFound) {
+                //std::cout << " TRUE";
+                Col.index = i;
+                Col.lambdaN = 0;
+                Col.lambdaT = 0;
+                collisions.push_back(Col);
+            }
+        } 
+        */
+        Body.updatePos(DeltaTime);
         for (int j = 0; j < 20; j++) {
             for (int i = 0; i < Edges.size(); i++) {
 
-                
-                
-                distanceConstraint(Body.Points[Edges[i].PositionIndex0].Position, Body.Points[Edges[i].PositionIndex1].Position, Edges[i].lambdaLength, 1.0, 1.0, Edges[i].InitialLength, 10);
+
                
+                //distanceConstraint(Body.Points[Edges[i].PositionIndex0].Position, Body.Points[Edges[i].PositionIndex1].Position, Edges[i].lambdaLength, 1.0, 1.0, Edges[i].InitialLength, 10);
+
             }
             //std::cout << "number of collisions: " << collisions.size() << std::endl;
             for (int i = 0; i < collisions.size(); i++) {
-                //collision c = collisions[i];
-                collisionConstraint(Body.Points[collisions[i].index].Position, collisions[i].point, collisions[i].normal, 1.0, collisions[i].lambdaN, collisions[i].lambdaT, 0.5, oldpos[i]);
+             
+                //collisionConstraint(Body.Points[collisions[i].index].Position, collisions[i].point, collisions[i].normal, 1.0, collisions[i].lambdaN, collisions[i].lambdaT, 0.5, oldpos[i]);
             }
-            
+
         }
-       
-        
-        
+
+
+
         for (int i = 0; i < 8; i++) {
-            Body.velocities[i] = (Body.Points[i].Position - oldpos[i]) / DeltaTime;
+            //Body.velocities[i] = (Body.Points[i].Position - oldpos[i]) / DeltaTime;
             //std::cout <<"x: " << Body.Points[i].Position(0) << "y: " << Body.Points[i].Position(1) << "z: " << Body.Points[i].Position(2) << std::endl;
         }
 
-       for (int i = 0; i < collisions.size(); i++) {
-           collision c = collisions[i];
-            v3 velocityN = Body.velocities[c.index].dot(c.normal) * c.normal;
-           v3 velocityT = Body.velocities[c.index] - velocityN;
-            v3 deltaV = -Min(0.1 * abs(c.lambdaN / DeltaTime) * 1.0, velocityT.norm()) * velocityT.normalized();
-           Body.velocities[c.index] += deltaV;
-        }
-       
-        
+        //for (int i = 0; i < collisions.size(); i++) {
+        //    collision c = collisions[i];
+        //    v3 velocityN = Body.velocities[c.index].dot(c.normal) * c.normal;
+        //    v3 velocityT = Body.velocities[c.index] - velocityN;
+        //    v3 deltaV = -Min(0.1 * abs(c.lambdaN / DeltaTime) * 1.0, velocityT.norm()) * velocityT.normalized();
+        //    Body.velocities[c.index] += deltaV;
+        //}
+
+
     }
-   
+
     SDL_GL_DeleteContext(Context);
     SDL_DestroyWindow(Window);
     SDL_Quit();

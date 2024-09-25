@@ -372,7 +372,6 @@ static std::vector <softBodyEdge> Edges = {
 };
 class model {
 public:
-    //softBodyTriangle Triangles[12];
 
     float initialVolume, volume;
 
@@ -455,17 +454,12 @@ public:
           { { -0.5f, -0.5f, -0.5f }, { 0.0f, 1.0f, 0.0f }, {0.0f , 1.0f} },
 
     };
-    //;
     float masses[8] = { 2,2,2,2,2,2,2,2 };
     v3 velocities[8] = { {0,0,0},{0,0,0},{0,0,0},{0,0,0},{0,0,0},{0,0,0},{0,0,0},{0,0,0} };
-    //v3 acceleration[8] = { {0,0,0},{0,0,0},{0,0,0},{0,0,0},{0,0,0},{0,0,0},{0,0,0},{0,0,0} };
-    //v3 forces[8] = { {0,0,0},{0,0,0},{0,0,0},{0,0,0},{0,0,0},{0,0,0},{0,0,0},{0,0,0} };
     float w[8] = { 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, };
     m3 Rot;
     void init() {
         Rot.setIdentity(3, 3);
-        //InvI0 = (v3(1.0, 1.0, 1.0) / 6.0 ); 
-        //InvI0 = InvI0.inverse();
         m3 temp{
 
             {6.0, 0.0,0.0},
@@ -759,7 +753,7 @@ public:
 
 };
 static std::vector <objectFace> PlaneFaces = {
-    objectFace(2,1,4)
+    objectFace(4,1,5)
 
 };
 
@@ -827,13 +821,13 @@ public:
 static vertex plane[] = {
 
     //plane
-     { { 5.0f,  0.0f, 5.0f }, { 0.0f, 1.0f, 0.0f }, {10.0f , 0.0f} }, //no difference whether 10, 0 is first of 0, 10 is first the numbers just have to mirror each other 
-    { { -5.0f, 0.0f, 5.0f }, { 0.0f, 1.0f, 0.0f }, {0.0f , 0.0f} },   //corner of triangle is 0, 0?
-    { { -5.0f, 0.0f, -5.0f }, { 0.0f, 1.0f, 0.0f }, {0.0f , 10.0f} },
+    { { 40.0f,  0.0f, 40.0f }, { 0.0f, 1.0f, 0.0f }, {10.0f , 0.0f} }, //no difference whether 10, 0 is first of 0, 10 is first the numbers just have to mirror each other 
+    { { -40.0f, 0.0f, 40.0f }, { 0.0f, 1.0f, 0.0f }, {0.0f , 0.0f} },   //corner of triangle is 0, 0?
+    { { -40.0f, 0.0f, -40.0f }, { 0.0f, 1.0f, 0.0f }, {0.0f , 10.0f} },
 
-    { { 5.0f,  0.0f, 5.0f }, { 0.0f, 1.0f, 0.0f }, {0.0f , 10.0f} },
-    { { 5.0f, 0.0f, -5.0f }, { 0.0f, 1.0f, 0.0f }, {0.0f , 0.0f} },
-    { { -5.0f, 0.0f, -5.0f }, { 0.0f, 1.0f, 0.0f }, {10.0f , 0.0f} },
+    { { 40.0f,  0.0f, 40.0f }, { 0.0f, 1.0f, 0.0f }, {10.0f , 0.0f} },
+    { { -40.0f, 0.0f, -40.0f }, { 0.0f, 1.0f, 0.0f }, {0.0f , 10.0f} },
+    { { 40.0f, 0.0f, -40.0f }, { 0.0f, 1.0f, 0.0f }, {10.0f , 10.0f} },
 
     //wall 1
  //z axis positive cube face
@@ -842,7 +836,7 @@ static vertex plane[] = {
  { { 4.5f,  -1.0f, 6.5f }, { 0.0f, 0.0f, 1.0f }, {0.0f , 1.0f} },
 
  { { 5.5f,  2.0f, 6.5f },  { 0.0f, 0.0f, 1.0f }, {1.0f , 0.0f} }, //9
- { { 5.5f,  -1.0f, 6.5f }, { 0.0f, 0.0f, 1.0f }, {0.0f , 0.0f}  },
+ { { 5.5f,  -1.0f, 6.5f }, { 0.0f, 0.0f, 1.0f }, {1.0f , 1.0f}  },
  { { 4.5f,  -1.0f, 6.5f }, { 0.0f, 0.0f, 1.0f }, {0.0f , 1.0f} },
 
  //z axis negative cube face
@@ -1430,8 +1424,10 @@ int main(int, char**) {
     // build and compile shaders
     // -------------------------
     Sh shader("C:/Users/User/Downloads/opengl/opengl/opengl/advanced_lighting.vs", "C:/Users/User/Downloads/opengl/opengl/opengl/advanced_lighting.fs");
+    shader.use();
+    shader.setInt("texture1", 0);
 
-    v3 lightPos(0.0f, 6.0f, 0.0f);
+    v3 lightPos(0.0f, 2.5f, 0.0f);
 
 
 
@@ -1459,7 +1455,7 @@ int main(int, char**) {
     int resetCounter = 0;
     Body.init();
     v3 collisionMomentum = { 0,0,0 };
-    v3 PseudoForce = { 0.0, -1.0, 0.0 }; //idk if force should be -1.0 or +1.0 on y
+    v3 PseudoForce = { 0.0, -1.0, 0.0 }; 
     while (Running) {
         
      
@@ -1569,7 +1565,7 @@ int main(int, char**) {
         m4 R4 = M4(Scale(0.6));//M4(R, v3(0.1, 0.0, 0.0));
 
         float CameraRadius = 6.0f;
-        m4 C = M4(Scale(Zoom)) * M4(RotationY(AngleY)) * M4(RotationX(AngleX)) * Translation(v3(0.0f, 0.0f, CameraRadius));
+        m4 Cam = M4(Scale(Zoom)) * M4(RotationY(AngleY)) * M4(RotationX(AngleX)) * Translation(v3(0.0f, 0.0f, CameraRadius));
         m4 V = Translation(v3(0.0f, 0.0f, -CameraRadius)) * M4(RotationX(-AngleX)) * M4(RotationY(-AngleY)) * M4(Scale(1.0f / Zoom));
         m4 P = Perspective(1.39626, WindowWidth / (float)WindowHeight, 0.1f, 100.0f);
 
@@ -1577,15 +1573,17 @@ int main(int, char**) {
 
         //original shader update during rendering
         //glCheck(glUseProgram(Shader));
-
+        //std::cout << "camera matrix:\n" << Cam << std::endl;
+        
         //learnopengl--------------------------------------------------------
-        shader.use();
+        
         shader.setMat4("projection", P);
         shader.setMat4("view", V);
         shader.setMat4("R", R4);
 
         // set light uniforms
-        //shader.setVec3("viewPos", camera.Position);
+        v3 viewPos(0.0, 0.0, 0.0);
+        shader.setVec3("viewPos", viewPos);
         shader.setVec3("lightPos", lightPos);
         //shader.setInt("blinn", blinn);
         //----------------------------------------------------------------------
@@ -1745,8 +1743,7 @@ int main(int, char**) {
 
         //glCheck(glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0));
         //36 overlapping cube edge points stored as indices, 6 per face
-
-
+        
         glGenBuffers(1, &CornerDuplicatesVBO);
         glGenVertexArrays(1, &CornerDuplicatesVAO);
         glBindVertexArray(CornerDuplicatesVAO);
@@ -1842,6 +1839,7 @@ int main(int, char**) {
         if (collisions.size() == 0)
             PseudoForce = { 0.0, 1.0, 0.0 };
         
+        v3 velocityBeforCol = Body.velocity;
         for (int j = 0; j < 20; j++) {
             for (int i = 0; i < Edges.size(); i++) {
 
@@ -1859,6 +1857,10 @@ int main(int, char**) {
             }
             
         }
+        //impulse from collisions, not perfect but works with restitution factor of 0.8
+        if ( collisions.size() > 0 and fabs(velocityBeforCol(1)) > 10.0 and fabs(velocityBeforCol(1)) > fabs(velocityBeforCol(0)) and 
+            fabs(velocityBeforCol(1)) > fabs(velocityBeforCol(2)))
+            Body.velocity = -velocityBeforCol * 0.8;
         collisionMomentum = { 0,0,0 };
         
         //std::cout << "here";
